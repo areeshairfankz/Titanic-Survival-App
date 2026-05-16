@@ -1,44 +1,30 @@
-import streamlit as st
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 import joblib
 
-# Page setup
-st.set_page_config(page_title="Titanic Survival Predictor", page_icon="🚢")
+# Load data
+df = pd.read_csv("train.csv")
 
-# Title
-st.title("🚢 Titanic Survival Prediction")
-st.write("Enter passenger details to know if they would survive")
+# Sirf 4 features use karo
+df = df[['Survived', 'Pclass', 'Sex', 'Age', 'Fare']].copy()
 
-# Load model
-@st.cache_resource
-def load_model():
-    return joblib.load("titanic_model.pkl")
+# Missing values handle karo
+df['Age'] = df['Age'].fillna(df['Age'].mean())
+df['Fare'] = df['Fare'].fillna(df['Fare'].mean())
 
-model = load_model()
+# Sex ko number mein convert
+df['Sex'] = (df['Sex'] == 'male').astype(int)
 
-# Input form
-st.sidebar.header("Passenger Details")
+# Features and target
+X = df[['Pclass', 'Sex', 'Age', 'Fare']]
+y = df['Survived']
 
-pclass = st.sidebar.selectbox("Ticket Class", [1, 2, 3])
-sex = st.sidebar.radio("Gender", ["Male", "Female"])
-age = st.sidebar.slider("Age", 1, 100, 30)
-fare = st.sidebar.number_input("Fare ($)", min_value=0.0, value=50.0)
+# Train model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X, y)
 
-# Convert gender to number
-sex_num = 1 if sex == "Male" else 0
+# Save model
+joblib.dump(model, "titanic_model.pkl")
 
-# Predict button
-if st.sidebar.button("Predict Survival"):
-    # Create input dataframe
-    input_data = pd.DataFrame([[pclass, sex_num, age, fare]], 
-                              columns=['Pclass', 'Sex', 'Age', 'Fare'])
-    
-    # Predict
-    prediction = model.predict(input_data)[0]
-    
-    # Show result
-    if prediction == 1:
-        st.success("✅ PASSENGER WOULD HAVE SURVIVED!")
-        st.balloons()
-    else:
-        st.error("❌ PASSENGER WOULD NOT HAVE SURVIVED")
+print("✅ Model trained successfully!")
+print("Features used:", X.columns.tolist())
